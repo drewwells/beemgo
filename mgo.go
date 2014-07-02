@@ -33,7 +33,6 @@ func (s *Service) New() {
 
 // Session attempts to create a session in the pool.
 func (s *Service) Session() *mgo.Session {
-	//ch := make(chan *mgo.Session)
 	<-s.queue
 	s.Open++
 	sess := s.spark.Copy()
