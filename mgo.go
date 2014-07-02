@@ -8,12 +8,12 @@ import (
 
 var max = 10
 
+// Service manages the pool of mongo connections.
 type Service struct {
 	spark *mgo.Session
 	queue chan int
 	Url   string
 	Open  int
-	pool  []*mgo.Session
 }
 
 // New bootstraps the Mongo pool making it possible to open
@@ -24,7 +24,6 @@ func (s *Service) New() {
 	for i := 0; i < max; i = i + 1 {
 		s.queue <- i
 	}
-	s.pool = make([]*mgo.Session, max)
 	s.Open = 0
 	s.spark, err = mgo.Dial(s.Url)
 	if err != nil {
@@ -33,21 +32,12 @@ func (s *Service) New() {
 }
 
 // Session attempts to create a session in the pool.
-func (s *Service) Session() chan *mgo.Session {
-	ch := make(chan *mgo.Session)
-	go func() {
-		<-s.queue
-		s.Open++
-		sess := s.spark.Clone()
-		for i, v := range s.pool {
-			if v == nil {
-				s.pool[i] = sess
-				break
-			}
-		}
-		ch <- sess
-	}()
-	return ch
+func (s *Service) Session() *mgo.Session {
+	//ch := make(chan *mgo.Session)
+	<-s.queue
+	s.Open++
+	sess := s.spark.Copy()
+	return sess
 }
 
 // Close an open session to free up space in the pool.

@@ -19,26 +19,23 @@ func (s *MgoSuite) TestNew(c *C) {
 		Url: "localhost",
 	}
 	svc.New()
-	ch := svc.Session()
-	s1 := <-ch
+	s1 := svc.Session()
 	c.Assert(svc.Open, Equals, 1)
+	s2 := svc.Session()
+	c.Assert(svc.Open, Equals, 2)
 	svc.Close(s1)
-	qSize := 0
-	for _, v := range svc.pool {
-		if v != nil {
-			qSize++
-		}
+	c.Assert(svc.Open, Equals, 1)
+	svc.Close(s2)
+	var ref *mgo.Session
+	delay := false
+	for i := 0; i < 10; i = i + 1 {
+		ref = svc.Session()
 	}
-	c.Assert(qSize, Equals, 1)
-	c.Assert(svc.Open, Equals, 0)
-	// Actually need a live mongo server to test this
-	// s.sess, err = Dial("localhost")
-	// if err != nil {
-	// 	c.Log(err.Error())
-	// }
-	// s1 := s.sess
-	// s2 := Session()
-	// c.Assert(s2, FitsTypeOf, &mgo.Session{})
-	// c.Assert(s1, Not(Equals), s2)
-
+	go func() {
+		//This will hang
+		svc.Session()
+		c.Assert(delay, Equals, true)
+	}()
+	svc.Close(ref)
+	delay = true
 }
