@@ -2,8 +2,10 @@ package beemgo
 
 import (
 	"testing"
+
 	. "gopkg.in/check.v1"
 	"labix.org/v2/mgo"
+	"labix.org/v2/mgo/bson"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -37,5 +39,33 @@ func (s *MgoSuite) TestNew(c *C) {
 		c.Assert(delay, Equals, true)
 	}()
 	svc.Close(ref)
+
 	delay = true
+}
+
+type MockController struct {
+	Controller
+}
+
+func (s *MgoSuite) TestController(c *C) {
+	ctrl := MockController{}
+	ctrl.Prepare()
+	c.Assert(singleton.Open, Equals, 1)
+	ctrl.Finish()
+	c.Assert(singleton.Open, Equals, 0)
+}
+
+func (s *MgoSuite) TestBroken(c *C) {
+	svc := Service{
+		Url: "",
+	}
+	svc.New()
+	s1 := svc.Session()
+	c.Assert(svc.Open, Equals, 1)
+
+	col := s1.DB("nodb").C("nocol")
+	var inf interface{}
+	err := col.Find(bson.M{}).One(&inf)
+	c.Assert(err.Error(), Equals, "not found")
+
 }
